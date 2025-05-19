@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wheel‑Controlled White‑Balance</title>
+<style>
+    :root {
+        --kmin: 2500;
+        --kmax: 10000;
+        --kelvin: 6500;     /* starting value */
+    }
+
+    html,body{
+        margin:0;
+        height:100%;
+        transition:background-color .25s ease;
+        font-family:system-ui,sans-serif;
+        user-select:none;           /* nicer when wheel‑scrolling */
+        overscroll-behavior:none;   /* avoid body bouncing on mobile */
+    }
+    .ui{
+        position:fixed;
+        bottom:1rem; left:50%;
+        transform:translateX(-50%);
+        display:flex;
+        gap:1rem;
+        align-items:center;
+        pointer-events:auto;
+        background:#ffffff55;
+        backdrop-filter:blur(6px);
+        padding:.6rem 1rem;
+        border-radius:.75rem;
+    }
+    #kval{
+        font-feature-settings:"tnum";
+        font-variant-numeric:tabular-nums;
+        min-width:6ch;
+        text-align:right;
+        display:none;               /* hidden by default */
+    }
+    button{
+        font:inherit;
+        padding:.4rem .8rem;
+        border-radius:.4rem;
+        border:1px solid #8884;
+        background:#fff9;
+        cursor:pointer;
+    }
+    button:hover{background:#fffb;}
+</style>
+</head>
+<body>
+
+<div class="ui">
+    <button id="toggleBtn">Reveal Kelvin Value</button>
+    <span id="kval">6500 K</span>
+</div>
+
+<script>
+/* -------- Kelvin‑to‑RGB helper (Tanner Helland, 1999) -------- */
+function kelvinToRGB(k){
+    const t = k/100;
+    const clamp = v=>Math.max(0,Math.min(255,v));
+
+    const r = t<=66 ? 255
+        : 329.698727446*Math.pow(t-60,-0.1332047592);
+
+    const g = t<=66
+        ? 99.4708025861*Math.log(t)-161.1195681661
+        : 288.1221695283*Math.pow(t-60,-0.0755148492);
+
+    let b;
+    if (t>=66)       b = 255;
+    else if (t<=19)  b = 0;
+    else             b = 138.5177312231*Math.log(t-10)-305.0447927307;
+
+    return {r:clamp(r)|0, g:clamp(g)|0, b:clamp(b)|0};
+}
+
+/* -------- State -------- */
+let kelvin = 10000;
+const STEP = 100;                       // change per wheel “tick”
+const KMIN = 2500, KMAX = 10000;
+
+const kval   = document.getElementById('kval');
+const toggle = document.getElementById('toggleBtn');
+
+/* -------- Functions -------- */
+function paint(){
+    const {r,g,b} = kelvinToRGB(kelvin);
+    document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
+    kval.textContent = `${kelvin} K`;
+}
+
+function adjust(deltaY){
+    kelvin += (deltaY>0 ? STEP : -STEP);
+    kelvin = Math.min(KMAX, Math.max(KMIN, kelvin));
+    paint();
+}
+
+/* -------- Event listeners -------- */
+window.addEventListener('wheel', e=>{
+    e.preventDefault();          // stop page from actually scrolling
+    adjust(e.deltaY);
+}, {passive:false});             // passive:false so preventDefault works
+
+toggle.addEventListener('click', ()=>{
+    const shown = kval.style.display!=='none';
+    kval.style.display = shown ? 'none' : 'inline-block';
+    toggle.textContent = shown ? 'Reveal Kelvin Value' : 'Hide Kelvin Value';
+});
+
+/* -------- Initial paint -------- */
+paint();
+</script>
+
+</body>
+</html>
