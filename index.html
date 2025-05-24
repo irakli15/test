@@ -8,65 +8,62 @@
     :root {
         --kmin: 2500;
         --kmax: 10000;
-        --kelvin: 6500;     /* starting value */
+        --kelvin: 2500;     /* starting value */
     }
 
-    html,body{
-        margin:0;
-        height:100%;
-        min-height:100vh;
-        transition:background-color .25s ease;
-        font-family:system-ui,sans-serif;
-        user-select:none;
-        overscroll-behavior:none;
+    html, body {
+        margin: 0;
+        height: 100%;
+        min-height: 100vh;
+        transition: background-color .25s ease;
+        font-family: system-ui, sans-serif;
+        user-select: none;
+        overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
     }
-    .ui{
-        position:fixed;
-        bottom:1rem; left:50%;
-        transform:translateX(-50%);
-        display:flex;
-        gap:1rem;
-        align-items:center;
-        pointer-events:auto;
-        background:#ffffff55;
-        backdrop-filter:blur(6px);
-        padding:.6rem 1rem;
-        border-radius:.75rem;
+    .ui {
+        position: fixed;
+        bottom: 1rem; left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        pointer-events: auto;
+        background: #29a74555;    /* Green translucent background */
+        backdrop-filter: blur(6px);
+        padding: .6rem 1rem;
+        border-radius: .75rem;
         z-index: 10;
     }
-    #kval{
-        font-feature-settings:"tnum";
-        font-variant-numeric:tabular-nums;
-        min-width:6ch;
-        text-align:right;
-        display:none;
+    #kval {
+        font-feature-settings: "tnum";
+        font-variant-numeric: tabular-nums;
+        min-width: 6ch;
+        text-align: right;
+        display: none;
     }
     button {
         font: inherit;
         padding: .4rem .8rem;
         border-radius: .4rem;
-        border: 1px solid #29a745;
-        background: #29a745;           /* Green background */
-        color: #e9ffe4;                /* Light greenish/white text for contrast */
+        border: none;              /* No border */
+        background: #29a745;       /* Green background */
+        color: #000000;            /* Light greenish/white text */
         cursor: pointer;
         touch-action: manipulation;
-        transition: background 0.2s, color 0.2s, border-color 0.2s;
+        transition: background 0.2s, color 0.2s;
     }
     button:hover, button:active {
-        background: #166a27;           /* Darker green on hover */
-        border-color: #166a27;
-        color: #e9ffe4;                /* Keep the text color the same */
+        background: #166a27;       /* Darker green on hover */
+        color: #9afb85;            /* Keep text the same */
     }
-
 </style>
-
 </head>
 <body>
 
 <div class="ui">
     <button id="toggleBtn">Reveal Kelvin Value</button>
-    <span id="kval">6500 K</span>
+    <span id="kval">2500</span>
 </div>
 
 <script>
@@ -93,7 +90,7 @@ const toggle = document.getElementById('toggleBtn');
 function paint(){
     const {r,g,b} = kelvinToRGB(kelvin);
     document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
-    document.documentElement.style.backgroundColor = `rgb(${r},${g},${b})`;
+    document.documentElement.style.backgroundColor = `rgb(${r},${g},${b})`; // iOS Safari fix
     kval.textContent = `${kelvin} K`;
 }
 
@@ -106,7 +103,7 @@ function adjust(delta){
 // Mouse wheel support (desktop/laptop)
 window.addEventListener('wheel', e=>{
     e.preventDefault();
-    adjust(e.deltaY>0 ? STEP : -STEP);
+    adjust(e.deltaY > 0 ? STEP : -STEP);
 }, {passive:false});
 
 // Touch support (mobile/tablet)
@@ -133,7 +130,7 @@ window.addEventListener('touchend', function(e){
 
 // Toggle button
 toggle.addEventListener('click', ()=>{
-    const shown = kval.style.display!=='none';
+    const shown = kval.style.display !== 'none';
     kval.style.display = shown ? 'none' : 'inline-block';
     toggle.textContent = shown ? 'Reveal Kelvin Value' : 'Hide Kelvin Value';
 });
