@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Touch‑&‑Wheel White‑Balance</title>
+<title>Wheel‑Controlled White‑Balance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     :root {
         --kmin: 2500;
         --kmax: 10000;
-        --kelvin: 6500;       /* start value */
+        --kelvin: 6500;     /* starting value */
     }
 
     html,body{
@@ -15,29 +16,30 @@
         height:100%;
         transition:background-color .25s ease;
         font-family:system-ui,sans-serif;
-        user-select:none;            /* nicer while swiping */
-        overscroll-behavior:none;    /* suppress rubber‑band scroll */
-        touch-action:none;           /* let us intercept vertical drags */
+        user-select:none;
+        overscroll-behavior:none;
+        -webkit-tap-highlight-color: transparent; /* better for mobile tap */
     }
-
-    /* --- tiny UI at bottom --- */
     .ui{
         position:fixed;
         bottom:1rem; left:50%;
         transform:translateX(-50%);
-        display:flex; gap:1rem; align-items:center;
+        display:flex;
+        gap:1rem;
+        align-items:center;
         pointer-events:auto;
         background:#ffffff55;
         backdrop-filter:blur(6px);
         padding:.6rem 1rem;
         border-radius:.75rem;
+        z-index: 10;
     }
     #kval{
         font-feature-settings:"tnum";
         font-variant-numeric:tabular-nums;
         min-width:6ch;
         text-align:right;
-        display:none;               /* hidden by default */
+        display:none;
     }
     button{
         font:inherit;
@@ -46,8 +48,9 @@
         border:1px solid #8884;
         background:#fff9;
         cursor:pointer;
+        touch-action: manipulation;
     }
-    button:hover{background:#fffb;}
+    button:hover, button:active{background:#fffb;}
 </style>
 </head>
 <body>
@@ -58,76 +61,76 @@
 </div>
 
 <script>
-/* --- Kelvin → RGB helper (Tanner Helland approximation) --- */
 function kelvinToRGB(k){
-    const t = k/100, clamp = v=>Math.max(0,Math.min(255,v));
-    const r = t<=66 ? 255
-        : 329.698727446*Math.pow(t-60,-0.1332047592);
+    const t = k/100;
+    const clamp = v=>Math.max(0,Math.min(255,v));
+    const r = t<=66 ? 255 : 329.698727446*Math.pow(t-60,-0.1332047592);
     const g = t<=66
         ? 99.4708025861*Math.log(t)-161.1195681661
         : 288.1221695283*Math.pow(t-60,-0.0755148492);
     let b;
-    if(t>=66)       b = 255;
-    else if(t<=19)  b = 0;
-    else            b = 138.5177312231*Math.log(t-10)-305.0447927307;
+    if (t>=66)       b = 255;
+    else if (t<=19)  b = 0;
+    else             b = 138.5177312231*Math.log(t-10)-305.0447927307;
     return {r:clamp(r)|0, g:clamp(g)|0, b:clamp(b)|0};
 }
 
-/* --- Constants & state --- */
-const STEP  = 100;        // Kelvin change per “tick”
-const PIXELS_PER_STEP = 40;   // swipe distance that ⇒ one tick
+let kelvin = 6500; // match starting value in display
+const STEP = 100;
 const KMIN = 2500, KMAX = 10000;
-
-let kelvin = 6500;
-
-/* --- DOM refs --- */
 const kval   = document.getElementById('kval');
 const toggle = document.getElementById('toggleBtn');
 
-/* --- painting --- */
 function paint(){
     const {r,g,b} = kelvinToRGB(kelvin);
     document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
     kval.textContent = `${kelvin} K`;
 }
 
-/* --- Kelvin adjuster --- */
-function nudge(direction, steps=1){
-    /* direction: +1 for cooler (scroll/pull down), −1 for warmer */
-    kelvin += direction * STEP * steps;
+function adjust(delta){
+    kelvin += delta;
     kelvin = Math.min(KMAX, Math.max(KMIN, kelvin));
     paint();
 }
 
-/* ---------- Mouse wheel ---------- */
-addEventListener('wheel', e=>{
-    e.preventDefault();                       // keep page still
-    nudge(e.deltaY>0 ? +1 : -1);
-},{passive:false});
+// Mouse wheel support (desktop/laptop)
+window.addEventListener('wheel', e=>{
+    e.preventDefault();
+    adjust(e.deltaY>0 ? STEP : -STEP);
+}, {passive:false});
 
-/* ---------- Touch / stylus via Pointer Events ---------- */
-let active = false, lastY = 0;
-addEventListener('pointerdown', e=>{
-    if(e.pointerType==='touch'){
-        active = true;
-        lastY = e.clientY;
+// Touch support (mobile/tablet)
+let touchStartY = null;
+window.addEventListener('touchstart', function(e){
+    if (e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
     }
-});
-addEventListener('pointermove', e=>{
-    if(active && e.pointerType==='touch'){
-        const dy = e.clientY - lastY;         // +ve: drag downward
-        const steps = Math.floor(Math.abs(dy)/PIXELS_PER_STEP);
-        if(steps){
-            nudge(dy>0 ? +1 : -1, steps);
-            lastY = e.clientY;                // reset threshold window
+}, {passive:true});
+window.addEventListener('touchmove', function(e){
+    if (touchStartY !== null && e.touches.length === 1) {
+        let deltaY = e.touches[0].clientY - touchStartY;
+        // Only adjust for significant swipes (avoid jitter)
+        if (Math.abs(deltaY) > 24) {
+            adjust(deltaY > 0 ? STEP : -STEP);
+            touchStartY = e.touches[0].clientY; // reset for next move
         }
-        e.preventDefault();
+        e.preventDefault(); // prevent scrolling
     }
-},{passive:false});
-addEventListener('pointerup',   e=>e.pointerType==='touch'&&(active=false));
-addEventListener('pointercancel',e=>e.pointerType==='touch'&&(active=false));
+}, {passive:false});
+window.addEventListener('touchend', function(e){
+    touchStartY = null;
+}, {passive:true});
 
-/* ---------- Show / hide Kelvin readout ---------- */
+// Toggle button
 toggle.addEventListener('click', ()=>{
     const shown = kval.style.display!=='none';
-    kval
+    kval.style.display = shown ? 'none' : 'inline-block';
+    toggle.textContent = shown ? 'Reveal Kelvin Value' : 'Hide Kelvin Value';
+});
+
+// Initial paint
+paint();
+</script>
+
+</body>
+</html>
