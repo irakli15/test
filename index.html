@@ -84,6 +84,7 @@ const toggle = document.getElementById('toggleBtn');
 function paint(){
     const {r,g,b} = kelvinToRGB(kelvin);
     document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
+    document.documentElement.style.backgroundColor = `rgb(${r},${g},${b})`;
     kval.textContent = `${kelvin} K`;
 }
 
